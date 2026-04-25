@@ -9,7 +9,9 @@
 #include "vibrator-impl/Vibrator.h"
 
 #include <android-base/logging.h>
+#include <chrono>
 #include <fstream>
+#include <thread>
 
 namespace aidl {
 namespace android {
@@ -41,6 +43,14 @@ ndk::ScopedAStatus Vibrator::on(int32_t timeoutMs,
     LOG(INFO) << "Vibrator on for timeoutMs: " << timeoutMs;
     write_haptic_node(duration_node, timeoutMs);
     write_haptic_node(activate_node, 1);
+
+    if (callback != nullptr) {
+        std::thread([=]() {
+            std::this_thread::sleep_for(std::chrono::milliseconds(timeoutMs));
+            callback->onComplete();
+        }).detach();
+    }
+
     return ndk::ScopedAStatus::ok();
 }
 
@@ -96,7 +106,7 @@ ndk::ScopedAStatus Vibrator::perform(Effect effect, EffectStrength strength,
     /* Setup effect index */
     write_haptic_node(index_node, index);
 
-    status = on(timeMs, nullptr);
+    status = on(timeMs, callback);
     if (!status.isOk()) {
         return status;
     } else {
