@@ -18,6 +18,10 @@
 
 #include <aidl/android/hardware/vibrator/BnVibrator.h>
 
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+
 namespace aidl {
 namespace android {
 namespace hardware {
@@ -46,6 +50,10 @@ static constexpr uint32_t WAVEFORM_DOUBLE_CLICK_EFFECT_INDEX = 6;
 static constexpr uint32_t WAVEFORM_THUD_EFFECT_INDEX = 7;
 
 class Vibrator : public BnVibrator {
+  public:
+    Vibrator() = default;
+    ~Vibrator() override;
+
     ndk::ScopedAStatus getCapabilities(int32_t* _aidl_return) override;
     ndk::ScopedAStatus off() override;
     ndk::ScopedAStatus on(int32_t timeoutMs,
@@ -76,6 +84,14 @@ class Vibrator : public BnVibrator {
     ndk::ScopedAStatus getSupportedBraking(std::vector<Braking>* supported) override;
     ndk::ScopedAStatus composePwle(const std::vector<PrimitivePwle> &composite,
                                    const std::shared_ptr<IVibratorCallback> &callback) override;
+
+  private:
+    void stopCompletionThread();
+
+    std::mutex mMutex;
+    std::condition_variable mCv;
+    bool mStopped = true;
+    std::thread mCompletionThread;
 };
 
 }  // namespace vibrator

@@ -11,7 +11,6 @@
 #include <android-base/logging.h>
 #include <chrono>
 #include <fstream>
-#include <thread>
 
 namespace aidl {
 namespace android {
@@ -30,8 +29,23 @@ ndk::ScopedAStatus Vibrator::getCapabilities(int32_t* _aidl_return) {
     return ndk::ScopedAStatus::ok();
 }
 
+void Vibrator::stopCompletionThread() {
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        mStopped = true;
+    }
+    mCv.notify_one();
+    if (mCompletionThread.joinable())
+        mCompletionThread.join();
+}
+
+Vibrator::~Vibrator() {
+    stopCompletionThread();
+}
+
 ndk::ScopedAStatus Vibrator::off() {
     LOG(INFO) << "Vibrator off";
+    stopCompletionThread();
     /* Reset index before triggering another set of haptics */
     write_haptic_node(index_node, 0);
     write_haptic_node(activate_node, 0);
@@ -41,14 +55,23 @@ ndk::ScopedAStatus Vibrator::off() {
 ndk::ScopedAStatus Vibrator::on(int32_t timeoutMs,
                                 const std::shared_ptr<IVibratorCallback>& callback) {
     LOG(INFO) << "Vibrator on for timeoutMs: " << timeoutMs;
+    stopCompletionThread();
     write_haptic_node(duration_node, timeoutMs);
     write_haptic_node(activate_node, 1);
 
     if (callback != nullptr) {
-        std::thread([=]() {
-            std::this_thread::sleep_for(std::chrono::milliseconds(timeoutMs));
-            callback->onComplete();
-        }).detach();
+        {
+            std::lock_guard<std::mutex> lock(mMutex);
+            mStopped = false;
+        }
+        mCompletionThread = std::thread([this, timeoutMs, callback]() {
+            std::unique_lock<std::mutex> lock(mMutex);
+            if (!mCv.wait_for(lock, std::chrono::milliseconds(timeoutMs),
+                              [this] { return mStopped; })) {
+                lock.unlock();
+                callback->onComplete();
+            }
+        });
     }
 
     return ndk::ScopedAStatus::ok();
