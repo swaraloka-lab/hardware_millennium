@@ -24,7 +24,7 @@ static void write_haptic_node(const std::string& path, const T& value) {
 
 ndk::ScopedAStatus Vibrator::getCapabilities(int32_t* _aidl_return) {
     LOG(INFO) << "Vibrator reporting capabilities";
-    *_aidl_return = 0;
+    *_aidl_return = IVibrator::CAP_AMPLITUDE_CONTROL;
     return ndk::ScopedAStatus::ok();
 }
 
@@ -121,7 +121,13 @@ ndk::ScopedAStatus Vibrator::getSupportedEffects(std::vector<Effect> *_aidl_retu
 }
 
 ndk::ScopedAStatus Vibrator::setAmplitude(float amplitude) {
-    return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
+    if (amplitude <= 0.0f || amplitude > 1.0f) {
+        return ndk::ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
+    }
+    uint32_t intensity = static_cast<uint32_t>(amplitude * 255.0f);
+    write_haptic_node(gain_node, intensity);
+    write_haptic_node(cont_drv_lvl_node, intensity);
+    return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus Vibrator::setExternalControl(bool enabled) {

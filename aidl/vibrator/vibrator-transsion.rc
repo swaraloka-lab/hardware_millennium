@@ -7,3 +7,11 @@ on post-fs
     chown system system /sys/class/leds/vibrator_single/activate
     chown system system /sys/class/leds/vibrator_single/duration
     chown system system /sys/class/leds/vibrator_single/index
+    chown system system /sys/class/leds/vibrator_single/gain
+    chown system system /sys/class/leds/vibrator_single/cont_drv_lvl
+
+    chmod 0660 /sys/class/leds/vibrator_single/activate
+    chmod 0660 /sys/class/leds/vibrator_single/duration
+    chmod 0660 /sys/class/leds/vibrator_single/index
+    chmod 0660 /sys/class/leds/vibrator_single/gain
+    chmod 0660 /sys/class/leds/vibrator_single/cont_drv_lvl

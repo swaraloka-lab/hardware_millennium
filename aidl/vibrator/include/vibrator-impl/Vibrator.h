@@ -27,6 +27,8 @@ namespace vibrator {
 static constexpr char activate_node[] = "/sys/class/leds/vibrator_single/activate";
 static constexpr char duration_node[] = "/sys/class/leds/vibrator_single/duration";
 static constexpr char index_node[] = "/sys/class/leds/vibrator_single/index";
+static constexpr char gain_node[] = "/sys/class/leds/vibrator_single/gain";
+static constexpr char cont_drv_lvl_node[] = "/sys/class/leds/vibrator_single/cont_drv_lvl";
 
 // Define durations for waveforms
 static constexpr uint32_t WAVEFORM_TICK_EFFECT_MS = 10;
